@@ -1,0 +1,6 @@
+{
+  "name": "Taita Taveta Service Delivery",
+  "description": "A ticket-based queue management system for the County Government of Taita Taveta.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

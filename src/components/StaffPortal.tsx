@@ -3,6 +3,7 @@ import { useAppContext } from '../store';
 import { User, CheckCircle2, Play, AlertCircle, LogOut, Settings, Users, Info, Shield, XCircle, PauseCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Staff } from '../types';
+import { StaffManagement } from './StaffManagement';
 
 export const StaffPortal: React.FC = () => {
   const { 
@@ -17,7 +18,7 @@ export const StaffPortal: React.FC = () => {
   const [payrollNumber, setPayrollNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'request' | 'verify'>('request');
-  const [staffTab, setStaffTab] = useState<'workspace' | 'history'>('workspace');
+  const [staffTab, setStaffTab] = useState<'workspace' | 'history' | 'metrics' | 'management'>('workspace');
   const [loginError, setLoginError] = useState('');
 
   const [counterNumber, setCounterNumber] = useState<string>('1');
@@ -160,6 +161,20 @@ export const StaffPortal: React.FC = () => {
             >
               Follow-Up & History
             </button>
+            <button 
+              onClick={() => setStaffTab('metrics')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${staffTab === 'metrics' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Metrics
+            </button>
+            {['admin', 'director'].includes(currentStaff.role) && (
+              <button 
+                onClick={() => setStaffTab('management')}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${staffTab === 'management' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Management
+              </button>
+            )}
           </div>
           <button 
             onClick={logoutStaff}
@@ -180,13 +195,28 @@ export const StaffPortal: React.FC = () => {
             <h3 className="text-emerald-100 font-medium mb-4 uppercase tracking-wider text-sm">Active Counter</h3>
             
             <div className="mb-4">
-              <label className="block text-xs font-medium text-emerald-200 mb-1">My Counter Number</label>
-              <input 
-                type="text" 
-                value={counterNumber}
-                onChange={(e) => setCounterNumber(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-emerald-500 bg-emerald-700/50 text-white placeholder-emerald-400 focus:ring-2 focus:ring-white outline-none"
-              />
+              <label className="block text-xs font-medium text-emerald-200 mb-1">My Counter</label>
+              {currentStaff.assignedCounters && currentStaff.assignedCounters.length > 0 ? (
+                <select 
+                  value={counterNumber}
+                  onChange={(e) => setCounterNumber(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-emerald-500 bg-emerald-700 text-white focus:ring-2 focus:ring-white outline-none"
+                >
+                  <option value="">Select a counter...</option>
+                  {currentStaff.assignedCounters.map(counterId => {
+                    const counter = dept?.counters?.find(c => c.id === counterId);
+                    return counter ? <option key={counter.id} value={counter.name}>{counter.name}</option> : null;
+                  })}
+                </select>
+              ) : (
+                <input 
+                  type="text" 
+                  value={counterNumber}
+                  onChange={(e) => setCounterNumber(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-emerald-500 bg-emerald-700/50 text-white placeholder-emerald-400 focus:ring-2 focus:ring-white outline-none"
+                  placeholder="e.g. 1"
+                />
+              )}
             </div>
 
             {servingTickets.filter(t => t.staffName === currentStaff.name).length > 0 ? (
@@ -252,110 +282,6 @@ export const StaffPortal: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Director View: Assign Services */}
-          {currentStaff.role === 'director' && (
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Settings className="text-emerald-600" size={20} /> Service Assignment
-              </h3>
-              <p className="text-xs text-gray-500 mb-4">Assign services to staff in your directorate.</p>
-              
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                {staffMembers.filter(s => s.directorateId === currentStaff.directorateId).map(staff => (
-                  <div key={staff.id} className="p-3 border border-gray-200 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold text-sm">{staff.name}</span>
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{staff.payrollNumber}</span>
-                    </div>
-                    <div className="space-y-1">
-                      {dept?.services.map(service => {
-                        const isAssigned = staff.assignedServices.includes(service.id);
-                        return (
-                          <label key={service.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input 
-                              type="checkbox"
-                              checked={isAssigned}
-                              onChange={(e) => {
-                                const newServices = e.target.checked 
-                                  ? [...staff.assignedServices, service.id]
-                                  : staff.assignedServices.filter(id => id !== service.id);
-                                updateStaffServices(staff.id, newServices);
-                              }}
-                              className="rounded text-emerald-600 focus:ring-emerald-500"
-                            />
-                            <span className={isAssigned ? 'text-gray-900' : 'text-gray-500'}>{service.name}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Admin View: Manage All Staff & POS */}
-          {currentStaff.role === 'admin' && (
-            <div className="space-y-6">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Settings className="text-emerald-600" size={20} /> Point of Service
-                </h3>
-                <p className="text-xs text-gray-500 mb-4">Select which services are available to citizens at this kiosk/terminal.</p>
-                <div className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                  {departments.map(dept => (
-                    <div key={dept.id}>
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">{dept.name}</h4>
-                      <div className="space-y-2 ml-2">
-                        {dept.services.map(service => {
-                          const isDisplayed = displayedServices.includes(service.id);
-                          return (
-                            <label key={service.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                              <input 
-                                type="checkbox"
-                                checked={isDisplayed}
-                                onChange={(e) => {
-                                  const newDisplayed = e.target.checked 
-                                    ? [...displayedServices, service.id]
-                                    : displayedServices.filter(id => id !== service.id);
-                                  updateDisplayedServices(newDisplayed);
-                                }}
-                                className="rounded text-emerald-600 focus:ring-emerald-500"
-                              />
-                              <span className={isDisplayed ? 'text-gray-900' : 'text-gray-500'}>{service.name}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Shield className="text-emerald-600" size={20} /> System Admin
-                </h3>
-                <p className="text-xs text-gray-500 mb-4">You have full access to view all staff members across the county.</p>
-                
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                  {staffMembers.map(staff => (
-                    <div key={staff.id} className="p-3 border border-gray-200 rounded-lg flex justify-between items-center">
-                      <div>
-                        <span className="font-semibold text-sm block">{staff.name}</span>
-                        <span className="text-xs text-gray-500">{getDepartmentById(staff.departmentId)?.name}</span>
-                      </div>
-                      <div className="flex gap-2">
-                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded uppercase">{staff.role}</span>
-                         <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">{staff.payrollNumber}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right Column: Queues */}
@@ -565,6 +491,63 @@ export const StaffPortal: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+
+      {staffTab === 'metrics' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-gray-900">Workload Metrics</h3>
+              <p className="text-xs text-gray-500">
+                {currentStaff.role === 'admin' && "Real-time metrics for all staff members"}
+                {currentStaff.role === 'director' && "Real-time metrics for your department's staff"}
+                {currentStaff.role === 'staff' && "Your real-time metrics"}
+              </p>
+            </div>
+          </div>
+          
+          <div className="p-6 overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="py-3 px-4 font-semibold text-sm text-gray-600">Staff Member</th>
+                  <th className="py-3 px-4 font-semibold text-sm text-gray-600">Role</th>
+                  <th className="py-3 px-4 font-semibold text-sm text-center text-gray-600">Total Served</th>
+                  <th className="py-3 px-4 font-semibold text-sm text-center text-emerald-600">Completed</th>
+                  <th className="py-3 px-4 font-semibold text-sm text-center text-amber-600">On Hold</th>
+                  <th className="py-3 px-4 font-semibold text-sm text-center text-red-600">Cancelled</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {(currentStaff.role === 'admin' ? staffMembers : (currentStaff.role === 'director' ? staffMembers.filter(s => s.departmentId === currentStaff.departmentId) : [currentStaff])).map(staff => {
+                  const staffTickets = tickets.filter(t => t.staffName === staff.name);
+                  const servedCount = staffTickets.filter(t => ['completed', 'hold', 'cancelled', 'serving'].includes(t.status)).length;
+                  const completedCount = staffTickets.filter(t => t.status === 'completed').length;
+                  const holdCount = staffTickets.filter(t => t.status === 'hold').length;
+                  const cancelledCount = staffTickets.filter(t => t.status === 'cancelled').length;
+                  
+                  return (
+                    <tr key={staff.payrollNumber} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-gray-900">{staff.name}</div>
+                        <div className="text-xs text-gray-500">{staff.payrollNumber}</div>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-600 capitalize">{staff.role}</td>
+                      <td className="py-3 px-4 text-center font-bold text-gray-700">{servedCount}</td>
+                      <td className="py-3 px-4 text-center font-semibold text-emerald-600">{completedCount}</td>
+                      <td className="py-3 px-4 text-center font-semibold text-amber-600">{holdCount}</td>
+                      <td className="py-3 px-4 text-center font-semibold text-red-600">{cancelledCount}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {staffTab === 'management' && (
+        <StaffManagement />
       )}
 
     </div>

@@ -11,11 +11,17 @@ export interface Directorate {
   name: string;
 }
 
+export interface Counter {
+  id: string;
+  name: string;
+}
+
 export interface Department {
   id: string;
   name: string;
   directorates: Directorate[];
   services: Service[];
+  counters?: Counter[];
 }
 
 export interface Staff {
@@ -26,6 +32,7 @@ export interface Staff {
   departmentId: string;
   directorateId: string;
   assignedServices: string[];
+  assignedCounters?: string[];
   role: 'staff' | 'director' | 'admin';
 }
 

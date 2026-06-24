@@ -23,15 +23,18 @@ interface AppContextType {
   verifyOTP: (payrollNumber: string, otp: string) => boolean;
   logoutStaff: () => void;
   updateStaffServices: (staffId: string, serviceIds: string[]) => void;
+  updateStaffCounters: (staffId: string, counterIds: string[]) => void;
   displayedServices: string[];
   updateDisplayedServices: (serviceIds: string[]) => void;
+  addStaff: (staff: Omit<Staff, 'id'>) => void;
+  addCounter: (departmentId: string, counterName: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [departments] = useState<Department[]>(INITIAL_DEPARTMENTS);
+  const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPARTMENTS);
   const [staffMembers, setStaffMembers] = useState<Staff[]>(INITIAL_STAFF);
   const [currentStaff, setCurrentStaff] = useState<Staff | null>(null);
   const [activeTab, setActiveTab] = useState('citizen');
@@ -80,9 +83,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateStaffServices = (staffId: string, serviceIds: string[]) => {
     setStaffMembers(prev => prev.map(s => s.id === staffId ? { ...s, assignedServices: serviceIds } : s));
-    // update current if needed
     if (currentStaff?.id === staffId) {
       setCurrentStaff(prev => prev ? { ...prev, assignedServices: serviceIds } : prev);
+    }
+  };
+
+  const updateStaffCounters = (staffId: string, counterIds: string[]) => {
+    setStaffMembers(prev => prev.map(s => s.id === staffId ? { ...s, assignedCounters: counterIds } : s));
+    if (currentStaff?.id === staffId) {
+      setCurrentStaff(prev => prev ? { ...prev, assignedCounters: counterIds } : prev);
     }
   };
 
@@ -155,6 +164,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return dept?.services.find(s => s.id === serviceId);
   };
 
+  const addStaff = (staff: Omit<Staff, 'id'>) => {
+    const newStaff: Staff = { ...staff, id: crypto.randomUUID() };
+    setStaffMembers(prev => [...prev, newStaff]);
+  };
+
+  const addCounter = (departmentId: string, counterName: string) => {
+    setDepartments(prev => prev.map(d => {
+      if (d.id === departmentId) {
+        const counters = d.counters || [];
+        return { ...d, counters: [...counters, { id: crypto.randomUUID(), name: counterName }] };
+      }
+      return d;
+    }));
+  };
+
   return (
     <AppContext.Provider value={{
       tickets,
@@ -176,8 +200,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       verifyOTP,
       logoutStaff,
       updateStaffServices,
+      updateStaffCounters,
       displayedServices,
-      updateDisplayedServices
+      updateDisplayedServices,
+      addStaff,
+      addCounter
     }}>
       {children}
     </AppContext.Provider>
